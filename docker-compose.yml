@@ -1,0 +1,81 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4.2.0-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq/mnesia # data is stored outside of the container
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity", "--address", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s # Give it 10s to start up before first check
+
+  mongo:
+    image: mongo:8.2.2
+    ports:
+      - "27017:27017"
+    environment:
+      # 1. Define the temporary Root User credentials (using secure _FILE variables)
+      MONGO_INITDB_ROOT_USERNAME_FILE: /etc/mongo/db_admin_username.txt
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /etc/mongo/db_admin_password.txt
+
+      # 2. Define the Non-Root Application User credentials (using secure _FILE variables)
+      CVE_DB_USER_FILE: /etc/mongo/db_user_username.txt
+      CVE_DB_PASSWORD_FILE: /etc/mongo/db_user_password.txt
+
+    volumes:
+      # Mount the initialization script
+      - ../cve/mongodb/init_mongodb.js:/docker-entrypoint-initdb.d/init-mongodb.js:ro
+      
+      # Mount the credential files from your host secrets directory
+      - ../cve/secrets/mongoDB_admin_username.txt:/etc/mongo/db_admin_username.txt:ro
+      - ../cve/secrets/mongoDB_admin_password.txt:/etc/mongo/db_admin_password.txt:ro
+      - ../cve/secrets/mongoDB_user_username.txt:/etc/mongo/db_user_username.txt:ro
+      - ../cve/secrets/mongoDB_user_password.txt:/etc/mongo/db_user_password.txt:ro
+
+      # Optional: data volume for persistence
+      - mongo-data:/data/db
+
+    # Added Healthcheck for MongoDB
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s # Give mongo time to run init scripts before checking
+
+  python-cve: # this can be any name I want for my Python service
+    build:
+      context: ../cve/python
+    depends_on:
+      rabbitmq:
+        condition: service_healthy # wait for rabbitmq to be healthy
+    environment:
+      # This env var tells your Python code to connect to the 
+      # "rabbitmq" service name on the shared network
+      RABBITMQ_HOST: rabbitmq
+
+  go-cve: # this can be any name I want for my Go service
+    build:
+      context: ../cve/go
+    depends_on:
+      rabbitmq:
+        condition: service_healthy # wait for rabbitmq to be healthy
+      mongo:
+        condition: service_healthy # wait for mongo to be started
+    environment:
+      # This env var tells your Python code to connect to the 
+      # "rabbitmq" service name on the shared network
+      RABBITMQ_HOST: rabbitmq
+
+volumes:
+  rabbitmq_data:
+  mongo-data:
+    driver: local
