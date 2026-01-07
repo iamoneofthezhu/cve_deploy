@@ -9,7 +9,7 @@ set -e  # Exit immediately if a command exits with a non-zero status
 # cd /path/to/your/project
 
 # Stop and remove existing containers, networks, images, and volumes
-docker compose down
+docker compose down -v
 
 # Build the python-cve service specifically
 docker compose build python-cve
