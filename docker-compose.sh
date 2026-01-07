@@ -8,7 +8,7 @@ set -e  # Exit immediately if a command exits with a non-zero status
 # Navigate to the directory containing your docker-compose.yml (optional)
 # cd /path/to/your/project
 
-# Stop and remove existing containers, networks, images, and volumes
+# Stop and remove existing containers, networks, images, and volumes. The -v flag removes data.
 docker compose down -v
 
 # Build the python-cve service specifically
