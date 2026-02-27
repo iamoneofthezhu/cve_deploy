@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: C:\Users\yalin\AppData\Local\Microsoft\WinGet\Packages\Kubernetes.kompose_Microsoft.Winget.Source_8wekyb3d8bbwe\kompose.exe convert -f ../docker-compose.yml --verbose
+    kompose.version: 1.38.0 (a8f5d1cbd)
+  labels:
+    io.kompose.service: mongo
+  name: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: mongo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: C:\Users\yalin\AppData\Local\Microsoft\WinGet\Packages\Kubernetes.kompose_Microsoft.Winget.Source_8wekyb3d8bbwe\kompose.exe convert -f ../docker-compose.yml --verbose
+        kompose.version: 1.38.0 (a8f5d1cbd)
+      labels:
+        io.kompose.service: mongo
+    spec:
+      containers:
+        - env:
+            - name: CVE_DB_PASSWORD_FILE
+              value: /etc/mongo/db_user_password.txt
+            - name: CVE_DB_USER_FILE
+              value: /etc/mongo/db_user_username.txt
+            - name: MONGO_INITDB_ROOT_PASSWORD_FILE
+              value: /etc/mongo/db_admin_password.txt
+            - name: MONGO_INITDB_ROOT_USERNAME_FILE
+              value: /etc/mongo/db_admin_username.txt
+          image: mongo:8.2.2
+          livenessProbe:
+            exec:
+              command:
+                - mongosh
+                - --eval
+                - db.runCommand('ping').ok
+            failureThreshold: 5
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: mongo
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /docker-entrypoint-initdb.d/init-mongodb.js
+              name: mongo-cm0
+              readOnly: true
+              subPath: init-mongodb.js
+            - mountPath: /etc/mongo/db_admin_username.txt
+              name: mongo-cm1
+              readOnly: true
+              subPath: db_admin_username.txt
+            - mountPath: /etc/mongo/db_admin_password.txt
+              name: mongo-cm2
+              readOnly: true
+              subPath: db_admin_password.txt
+            - mountPath: /etc/mongo/db_user_username.txt
+              name: mongo-cm3
+              readOnly: true
+              subPath: db_user_username.txt
+            - mountPath: /etc/mongo/db_user_password.txt
+              name: mongo-cm4
+              readOnly: true
+              subPath: db_user_password.txt
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            items:
+              - key: init_mongodb.js
+                path: init-mongodb.js
+            name: mongo-cm0
+          name: mongo-cm0
+        - configMap:
+            items:
+              - key: mongoDB_admin_username.txt
+                path: db_admin_username.txt
+            name: mongo-cm1
+          name: mongo-cm1
+        - configMap:
+            items:
+              - key: mongoDB_admin_password.txt
+                path: db_admin_password.txt
+            name: mongo-cm2
+          name: mongo-cm2
+        - configMap:
+            items:
+              - key: mongoDB_user_username.txt
+                path: db_user_username.txt
+            name: mongo-cm3
+          name: mongo-cm3
+        - configMap:
+            items:
+              - key: mongoDB_user_password.txt
+                path: db_user_password.txt
+            name: mongo-cm4
+          name: mongo-cm4
