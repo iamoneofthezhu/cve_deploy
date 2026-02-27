@@ -5,8 +5,8 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq/mnesia # data is stored outside of the container
+    #volumes:
+      #- "rabbitmq_data:/var/lib/rabbitmq/mnesia" #kompose failed to convert this to kubernetes config file so manually added to deployment.yaml
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -34,14 +34,14 @@ services:
       # Mount the initialization script
       - ../cve/mongodb/init_mongodb.js:/docker-entrypoint-initdb.d/init-mongodb.js:ro
       
-      # Mount the credential files from your host secrets directory
+      # Mount the credential files from your host secrets directory to directory in Docker
       - ../cve/secrets/mongoDB_admin_username.txt:/etc/mongo/db_admin_username.txt:ro
       - ../cve/secrets/mongoDB_admin_password.txt:/etc/mongo/db_admin_password.txt:ro
       - ../cve/secrets/mongoDB_user_username.txt:/etc/mongo/db_user_username.txt:ro
       - ../cve/secrets/mongoDB_user_password.txt:/etc/mongo/db_user_password.txt:ro
 
       # Optional: data volume for persistence
-      - mongo-data:/data/db
+      #- "mongo-data:/data/db" #kompose failed to convert this to kubernetes config file so manually added to deployment.yaml
 
     # Added Healthcheck for MongoDB
     healthcheck:
@@ -52,6 +52,8 @@ services:
       start_period: 15s # Give mongo time to run init scripts before checking
 
   python-cve: # this can be any name I want for my Python service
+    ports: 
+      - "8000:8000"
     build:
       context: ../cve/python
     depends_on:
@@ -63,6 +65,8 @@ services:
       RABBITMQ_HOST: rabbitmq
 
   go-cve: # this can be any name I want for my Go service
+    ports: 
+      - "8080:8080"
     build:
       context: ../cve/go
     depends_on:
@@ -71,11 +75,15 @@ services:
       mongo:
         condition: service_healthy # wait for mongo to be started
     environment:
+      MONGO_ROOT_USERNAME_FILE: /etc/mongo/db_admin_username.txt
+      MONGO_ROOT_PASSWORD_FILE: /etc/mongo/db_admin_password.txt
       # This env var tells your Python code to connect to the 
       # "rabbitmq" service name on the shared network
       RABBITMQ_HOST: rabbitmq
+    volumes:
+      - ../cve/secrets/mongoDB_admin_username.txt:/etc/mongo/db_admin_username.txt:ro
+      - ../cve/secrets/mongoDB_admin_password.txt:/etc/mongo/db_admin_password.txt:ro
 
-volumes:
-  rabbitmq_data:
-  mongo-data:
-    driver: local
+#volumes: # manually added to deployment.yaml
+  #rabbitmq_data: {}
+  #mongo-data: {}
