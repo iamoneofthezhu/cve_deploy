@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: frontend-cve
+  name: frontend-cve
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: frontend-cve
+  template:
+    metadata:
+      labels:
+        io.kompose.service: frontend-cve
+    spec:
+      containers:
+        - name: frontend-cve
+          image: frontend-cve #use this for local minikube
+          #image: us-central1-docker.pkg.dev/cve-project-493616/my-repo/frontend-cve:latest #use this for Google cloud
+          imagePullPolicy: Never #use this for local minikube
+          #imagePullPolicy: IfNotPresent #use this for Google cloud
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+      restartPolicy: Always
