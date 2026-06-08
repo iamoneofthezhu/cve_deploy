@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: python-api
+  name: python-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: python-api
+  template:
+    metadata:
+      labels:
+        io.kompose.service: python-api
+    spec:
+      containers:
+        - name: python-api
+          image: python-api #use this for local minikube
+          #image: us-central1-docker.pkg.dev/cve-project-493616/my-repo/python-api:latest #use this for Google cloud
+          imagePullPolicy: Never #use this for local minikube
+          #imagePullPolicy: IfNotPresent #use this for Google cloud
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          env:
+            - name: GOOGLE_AI_STUDIO_API_KEY_FILE
+              value: /etc/google/google_ai_studio_api_key.txt
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-atlas-secret
+                  key: password
+          volumeMounts:
+            - name: google-ai-storage
+              mountPath: /etc/google
+              readOnly: true
+      restartPolicy: Always
+      volumes:
+        - name: google-ai-storage
+          secret:
+            secretName: google-ai-secret
